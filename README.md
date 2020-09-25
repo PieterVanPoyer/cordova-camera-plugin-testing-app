@@ -1,0 +1,1 @@
+# cordova-camera-plugin-testing-app
