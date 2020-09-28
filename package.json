@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "cordova-prepare": "cordova prepare",
     "build-for-android": "cordova build",
     "emulate-for-android": "cordova emulate android"
   },

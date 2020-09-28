@@ -29,11 +29,21 @@ function onDeviceReady() {
 
     setTimeout(() => {
         console.info('opening camera');
-        openCamera();
+        openCamera(true);
     }, 1000);
 }
 
-function setOptions() {
+document.getElementById('openCameraWithSaveToGallery').addEventListener('click', () => {
+    console.info('opening camera with save To gallery');
+    openCamera(true);
+});
+
+document.getElementById('openCameraWithoutSaveToGallery').addEventListener('click', () => {
+    console.info('opening camera without save To gallery');
+    openCamera(false);
+});
+
+function setOptions(saveToPhotoAlbum) {
     var options = {
         // Some common settings are 20, 50, and 100
         quality: 50,
@@ -44,14 +54,15 @@ function setOptions() {
         mediaType: Camera.MediaType.PICTURE,
         // allowEdit: true,
         correctOrientation: true,  //Corrects Android orientation quirks,
-        saveToPhotoAlbum: true
+        saveToPhotoAlbum: saveToPhotoAlbum
     }
     return options;
 }
 
-function openCamera() {
+function openCamera(saveToPhotoAlbum) {
 
-    var options = setOptions();
+    clearImage();
+    var options = setOptions(saveToPhotoAlbum);
     // var func = createNewFileEntry;
 
     navigator.camera.getPicture(function cameraSuccess(imageUri) {
@@ -73,3 +84,10 @@ function displayImage(imgUri) {
     var elem = document.getElementById('imageFile');
     elem.src = imgUri;
 }
+
+function clearImage() {
+
+    var elem = document.getElementById('imageFile');
+    elem.src = '';
+}
+
