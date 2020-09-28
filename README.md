@@ -13,3 +13,7 @@ The app should open inside the emulator.
 
 Automatically the camera opens. (Settings are set with ``saveToPhotoAlbum: true`` )
 When you take a picture and confirm the picture, the image should be visible on the webview.
+
+You can click the buttons to test with and without saveToPhotoAlbum
+
+![Reproduction UI](ReproductionUI.JPG)
