@@ -23,7 +23,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -511,40 +510,19 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // in the gallery and the modified image is saved in the temporary
         // directory
         if (this.saveToPhotoAlbum) {
-            String galleryPath = getPicturesPath();
-            galleryUri = Uri.fromFile(new File(galleryPath));
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                /*We cannot access the image directly so we again create a new File at different location and use it for futher processing.*/
+            GalleryPathVO galleryPathVO = getPicturesPath();
+            galleryUri = Uri.fromFile(new File(galleryPathVO.getGalleryPath()));
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    Bitmap capturedBitmap = getBitmap(this.cordova.getActivity());
-                    ContentResolver resolver = this.cordova.getActivity().getContentResolver();
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, galleryPath); // TODO PIV only the image name, not the path/
-                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, getMimetypeForFormat(encodingType));
-                    Uri galleryOutputUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
-                    OutputStream fos = resolver.openOutputStream(galleryOutputUri);
-
-                    CompressFormat compressFormat = encodingType == JPEG ?
-                            CompressFormat.JPEG :
-                            CompressFormat.PNG;
-                    capturedBitmap.compress(compressFormat, 100, fos);
-
-                    fos.flush();
-                    fos.close();
-                } else {
-                    InputStream fileStream = FileHelper.getInputStreamFromUriString(imageUri.toString(), cordova);
-                    writeUncompressedImage(fileStream, galleryUri);
-                    refreshGallery(galleryUri);
-                }
+            if (this.allowEdit && this.croppedUri != null) {
+                writeUncompressedImage(croppedUri, galleryUri);
             } else {
-                if (this.allowEdit && this.croppedUri != null) {
-                    writeUncompressedImage(croppedUri, galleryUri);
-                } else {
-                    Uri imageUri = this.imageUri;
-                    writeUncompressedImage(imageUri, galleryUri);
+                /*We cannot access the image directly so we again create a new File at different location and use it for further processing.*/
+
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) { // Between LOLLIPOP_MR1 and P
+                    writeTakenPictureToGalleryLowerThanAndroidQ(galleryUri);
+                } else { // Android Q or higher
+                    writeTakenPictureToGalleryStartingFromAndroidQ(galleryPathVO);
                 }
-                refreshGallery(galleryUri);
             }
         }
 
@@ -609,9 +587,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
                 // Add compressed version of captured image to returned media store Uri
                 OutputStream os = this.cordova.getActivity().getContentResolver().openOutputStream(uri);
-                CompressFormat compressFormat = encodingType == JPEG ?
-                        CompressFormat.JPEG :
-                        CompressFormat.PNG;
+                CompressFormat compressFormat = getCompressFormatForEncodingType(encodingType);
 
                 bitmap.compress(compressFormat, this.mQuality, os);
                 os.close();
@@ -639,18 +615,44 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         bitmap = null;
     }
 
-    private String getPicturesPath() {
+    private void writeTakenPictureToGalleryLowerThanAndroidQ(Uri galleryUri) throws IOException {
+        InputStream fileStream = FileHelper.getInputStreamFromUriString(imageUri.toString(), cordova);
+        writeUncompressedImage(fileStream, galleryUri);
+        refreshGallery(galleryUri);
+    }
+
+    private void writeTakenPictureToGalleryStartingFromAndroidQ(GalleryPathVO galleryPathVO) throws IOException {
+        Bitmap capturedBitmap = getBitmap(this.cordova.getActivity());
+        ContentResolver resolver = this.cordova.getActivity().getContentResolver();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, galleryPathVO.getGalleryFileName());
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, getMimetypeForFormat(encodingType));
+        Uri galleryOutputUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+        OutputStream fos = resolver.openOutputStream(galleryOutputUri);
+
+        CompressFormat compressFormat = getCompressFormatForEncodingType(encodingType);
+        capturedBitmap.compress(compressFormat, 100, fos);
+
+        fos.flush();
+        fos.close();
+    }
+
+    private CompressFormat getCompressFormatForEncodingType(int encodingType) {
+        return encodingType == JPEG ? CompressFormat.JPEG : CompressFormat.PNG;
+    }
+
+    private GalleryPathVO getPicturesPath() {
         String timeStamp = new SimpleDateFormat(TIME_FORMAT).format(new Date());
         String imageFileName = "IMG_" + timeStamp + (this.encodingType == JPEG ? JPEG_EXTENSION : PNG_EXTENSION);
         File storageDir = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES);
         storageDir.mkdirs();
-        String galleryPath = storageDir.getAbsolutePath() + "/" + imageFileName;
-        return galleryPath;
+        return new GalleryPathVO(storageDir.getAbsolutePath(), imageFileName);
     }
 
     private void refreshGallery(Uri contentUri) {
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            // Starting from Android Q, working with the ACTION_MEDIA_SCANNER_SCAN_FILE intent is deprecated
         mediaScanIntent.setData(contentUri);
         this.cordova.getActivity().sendBroadcast(mediaScanIntent);
     }
@@ -682,9 +684,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         String modifiedPath = getTempDirectoryPath() + "/" + fileName;
 
         OutputStream os = new FileOutputStream(modifiedPath);
-        CompressFormat compressFormat = this.encodingType == JPEG ?
-                CompressFormat.JPEG :
-                CompressFormat.PNG;
+        CompressFormat compressFormat = getCompressFormatForEncodingType(this.encodingType);
 
         bitmap.compress(compressFormat, this.mQuality, os);
         os.close();
@@ -945,20 +945,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         FileInputStream fis = new FileInputStream(FileHelper.stripFileProtocol(src.toString()));
         writeUncompressedImage(fis, dest);
 
-    }
-
-    private void writeUncompressedImage(Bitmap src, Uri dest) throws FileNotFoundException,
-            IOException {
-        InputStream is = this.bitmapToInputStream(src);
-        writeUncompressedImage(is, dest);
-    }
-
-    private InputStream bitmapToInputStream(Bitmap bitmap) {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        bitmap.compress(CompressFormat.PNG, 0 /*ignored for PNG*/, bos);
-        byte[] bitmapdata = bos.toByteArray();
-        ByteArrayInputStream bs = new ByteArrayInputStream(bitmapdata);
-        return bs;
     }
 
     /**
@@ -1314,9 +1300,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      */
     public void processPicture(Bitmap bitmap, int encodingType) {
         ByteArrayOutputStream jpeg_data = new ByteArrayOutputStream();
-        CompressFormat compressFormat = encodingType == JPEG ?
-                CompressFormat.JPEG :
-                CompressFormat.PNG;
+        CompressFormat compressFormat = getCompressFormatForEncodingType(encodingType);
 
         try {
             if (bitmap.compress(compressFormat, mQuality, jpeg_data)) {

@@ -27,20 +27,30 @@ function onDeviceReady() {
     console.log('Running cordova-' + cordova.platformId + '@' + cordova.version);
     document.getElementById('deviceready').classList.add('ready');
 
-    setTimeout(() => {
+    setTimeout(function() {
         console.info('opening camera');
         openCamera(true);
     }, 1000);
 }
 
-document.getElementById('openCameraWithSaveToGallery').addEventListener('click', () => {
+document.getElementById('openCameraWithSaveToGallery').addEventListener('click', function() {
     console.info('opening camera with save To gallery');
     openCamera(true);
 });
 
-document.getElementById('openCameraWithoutSaveToGallery').addEventListener('click', () => {
+document.getElementById('openCameraWithoutSaveToGallery').addEventListener('click', function() {
     console.info('opening camera without save To gallery');
     openCamera(false);
+});
+
+document.getElementById('openGalleryWithSaveToGallery').addEventListener('click', function() {
+    console.info('opening gallery with save To gallery');
+    openGallery(true);
+});
+
+document.getElementById('openGalleryWithoutSaveToGallery').addEventListener('click', function() {
+    console.info('opening gallery without save To gallery');
+    openGallery(false);
 });
 
 function setOptions(saveToPhotoAlbum) {
@@ -91,3 +101,23 @@ function clearImage() {
     elem.src = '';
 }
 
+function openGallery(saveToPhotoAlbum) {
+
+    clearImage();
+    var options = setOptions(saveToPhotoAlbum);
+    options.sourceType = Camera.PictureSourceType.PHOTOLIBRARY;
+    // var func = createNewFileEntry;
+
+    navigator.camera.getPicture(function cameraSuccess(imageUri) {
+
+        console.debug('Got from gallery', 'app');
+
+        displayImage(imageUri);
+        // You may choose to copy the picture, save it somewhere, or upload.
+        // func(imageUri);
+
+    }, function cameraError(error) {
+        console.debug('Unable to obtain picture from gallery: ' + error, 'app');
+
+    }, options);
+}
