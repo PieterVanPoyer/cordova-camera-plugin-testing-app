@@ -26,11 +26,32 @@ function onDeviceReady() {
 
     console.log('Running cordova-' + cordova.platformId + '@' + cordova.version);
     document.getElementById('deviceready').classList.add('ready');
+}
 
-    setTimeout(function() {
-        console.info('opening camera');
-        openCamera(true);
-    }, 1000);
+document.addEventListener('resume', onResume, false);
+
+function onResume(event) {
+    console.log('in the on resume', event);
+
+    // Now we can check if there is a plugin result in the event object.
+    // This requires cordova-android 5.1.0+
+    if(event.pendingResult) {
+        // Figure out whether or not the plugin call was successful and call
+        // the relevant callback. For the camera plugin, "OK" means a
+        // successful result and all other statuses mean error
+        if(event.pendingResult.pluginStatus === "OK") {
+            console.log('in the on resume pendingResult and succes plugin status. Displaying the image.');
+            // The camera plugin places the same result in the resume object
+            // as it passes to the success callback passed to getPicture(),
+            // thus we can pass it to the same callback. Other plugins may
+            // return something else. Consult the documentation for
+            // whatever plugin you are using to learn how to interpret the
+            // result field
+            displayImage(event.pendingResult.result);
+        } else {
+            console.debug('Unable to obtain picture: ' + event.pendingResult.result, 'app');
+        }
+    }
 }
 
 document.getElementById('openCameraWithSaveToGallery').addEventListener('click', function() {
