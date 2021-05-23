@@ -22,4 +22,10 @@ npx cordova plugin remove cordova-plugin-camera
 npx cordova plugin add https://github.com/PieterVanPoyer/cordova-plugin-camera/#bugfix/issue-665-save-instance-restore-bug
 ````
 
+or install from a local folder
+````
+npx cordova plugin remove cordova-plugin-camera
+npx cordova plugin add D:\a-local-folder-path\cordova-plugin-camera
+````
+
 ![Reproduction UI](ReproductionUI.JPG)

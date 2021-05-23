@@ -85,7 +85,9 @@ function setOptions(saveToPhotoAlbum) {
         mediaType: Camera.MediaType.PICTURE,
         // allowEdit: true,
         correctOrientation: true,  //Corrects Android orientation quirks,
-        saveToPhotoAlbum: saveToPhotoAlbum
+        saveToPhotoAlbum: saveToPhotoAlbum,
+        targetWidth: 500,
+        targetHeight: 500,
     }
     return options;
 }
@@ -131,7 +133,7 @@ function openGallery(saveToPhotoAlbum) {
 
     navigator.camera.getPicture(function cameraSuccess(imageUri) {
 
-        console.debug('Got from gallery', 'app');
+        console.debug('Got from gallery', 'app', imageUri);
 
         displayImage(imageUri);
         // You may choose to copy the picture, save it somewhere, or upload.
