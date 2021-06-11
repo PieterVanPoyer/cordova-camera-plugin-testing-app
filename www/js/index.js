@@ -35,11 +35,11 @@ function onResume(event) {
 
     // Now we can check if there is a plugin result in the event object.
     // This requires cordova-android 5.1.0+
-    if(event.pendingResult) {
+    if (event.pendingResult) {
         // Figure out whether or not the plugin call was successful and call
         // the relevant callback. For the camera plugin, "OK" means a
         // successful result and all other statuses mean error
-        if(event.pendingResult.pluginStatus === "OK") {
+        if (event.pendingResult.pluginStatus === 'OK') {
             console.log('in the on resume pendingResult and succes plugin status. Displaying the image.');
             // The camera plugin places the same result in the resume object
             // as it passes to the success callback passed to getPicture(),
@@ -54,31 +54,41 @@ function onResume(event) {
     }
 }
 
-document.getElementById('openCameraWithSaveToGallery').addEventListener('click', function() {
+document.getElementById('openCameraWithSaveToGallery').addEventListener('click', function () {
     console.info('opening camera with save To gallery');
     openCamera(true);
 });
 
-document.getElementById('openCameraWithoutSaveToGallery').addEventListener('click', function() {
+document.getElementById('openCameraWithoutSaveToGallery').addEventListener('click', function () {
     console.info('opening camera without save To gallery');
     openCamera(false);
 });
 
-document.getElementById('openGalleryWithSaveToGallery').addEventListener('click', function() {
+document.getElementById('openGalleryWithSaveToGallery').addEventListener('click', function () {
     console.info('opening gallery with save To gallery');
     openGallery(true);
 });
 
-document.getElementById('openGalleryWithoutSaveToGallery').addEventListener('click', function() {
+document.getElementById('openGalleryWithoutSaveToGallery').addEventListener('click', function () {
     console.info('opening gallery without save To gallery');
     openGallery(false);
 });
 
-function setOptions(saveToPhotoAlbum) {
+document.getElementById('openGalleryWithoutSaveToGalleryAsDataUri').addEventListener('click', function () {
+    console.info('opening gallery without save To gallery as data uri');
+    openGallery(false, Camera.DestinationType.DATA_URL);
+});
+
+document.getElementById('openGalleryWithSaveToGalleryAsDataUri').addEventListener('click', function () {
+    console.info('opening gallery with save To gallery as data uri');
+    openGallery(true, Camera.DestinationType.DATA_URL);
+});
+
+function setOptions(saveToPhotoAlbum, destinationType) {
     var options = {
         // Some common settings are 20, 50, and 100
         quality: 50,
-        destinationType: Camera.DestinationType.FILE_URI,
+        destinationType: !!destinationType ? Camera.DestinationType.FILE_URI : destinationType,
         // In this app, dynamically set the picture source, Camera or photo gallery
         sourceType: Camera.PictureSourceType.CAMERA,
         encodingType: Camera.EncodingType.JPEG,
@@ -118,16 +128,21 @@ function displayImage(imgUri) {
     elem.src = imgUri;
 }
 
+function displayImageAsDataUri(dataUrl) {
+    var elem = document.getElementById('imageFile');
+    elem.src = 'data:image/jpeg;base64,' + dataUrl;
+}
+
 function clearImage() {
 
     var elem = document.getElementById('imageFile');
     elem.src = '';
 }
 
-function openGallery(saveToPhotoAlbum) {
+function openGallery(saveToPhotoAlbum, destinationType) {
 
     clearImage();
-    var options = setOptions(saveToPhotoAlbum);
+    var options = setOptions(saveToPhotoAlbum, destinationType);
     options.sourceType = Camera.PictureSourceType.PHOTOLIBRARY;
     // var func = createNewFileEntry;
 
@@ -135,7 +150,11 @@ function openGallery(saveToPhotoAlbum) {
 
         console.debug('Got from gallery', 'app', imageUri);
 
-        displayImage(imageUri);
+        if (Camera.DestinationType.DATA_URL === destinationType) {
+            displayImageAsDataUri(imageUri);
+        } else {
+            displayImage(imageUri);
+        }
         // You may choose to copy the picture, save it somewhere, or upload.
         // func(imageUri);
 
